@@ -54,7 +54,7 @@ You should have received a copy of the GNU General Public License along with Tel
 #define TL_HELP_GET_CONFIG               0xc4f9186b // help.getConfig
 
 // Users
-#define TL_USER                          0x31774388 // user (Layer 225)
+#define TL_USER                          0x31774388 // user
 #define TL_USER_EMPTY                    0xd3bc4b7a // userEmpty
 
 // Chats
@@ -63,18 +63,18 @@ You should have received a copy of the GNU General Public License along with Tel
 #define TL_CHAT_EMPTY                    0x29562865 // chatEmpty
 
 // Channels & Megagroups
-#define TL_CHANNEL                       0x1c32b11c // channel (Layer 225)
+#define TL_CHANNEL                       0x1c32b11c // channel
 #define TL_CHANNEL_FORBIDDEN             0x17d493d5 // channelForbidden
 
 // Messages
-#define TL_MESSAGE                       0x95ef6f2b // message (Layer 225)
-#define TL_MESSAGE_SERVICE               0x7a800e0a // messageService (Layer 225)
+#define TL_MESSAGE                       0x95ef6f2b // message
+#define TL_MESSAGE_SERVICE               0x7a800e0a // messageService
 #define TL_MESSAGE_EMPTY                 0x90a6ca84 // messageEmpty
 
 // Messages Response (messages.messages, messages.messagesSlice, messages.channelMessages)
-#define TL_MESSAGES_MESSAGES             0x1d73e7ea // messages.messages (Layer 225)
-#define TL_MESSAGES_MESSAGES_SLICE       0x5f206716 // messages.messagesSlice (Layer 225)
-#define TL_MESSAGES_CHANNEL_MESSAGES     0xc776ba4e // messages.channelMessages (Layer 225)
+#define TL_MESSAGES_MESSAGES             0x1d73e7ea // messages.messages
+#define TL_MESSAGES_MESSAGES_SLICE       0x5f206716 // messages.messagesSlice
+#define TL_MESSAGES_CHANNEL_MESSAGES     0xc776ba4e // messages.channelMessages
 
 // Photos
 #define TL_USER_PROFILE_PHOTO            0x82d1f706 // userProfilePhoto
@@ -113,11 +113,11 @@ You should have received a copy of the GNU General Public License along with Tel
 #define TL_ACTION_CUSTOM_ACTION          0xfae69f56 // messageActionCustomAction
 
 // Message Media
-#define TL_MEDIA_PHOTO                   0xe216eb63 // messageMediaPhoto (Layer 225)
-#define TL_MEDIA_DOCUMENT                0x52d8ccd9 // messageMediaDocument (Layer 225)
+#define TL_MEDIA_PHOTO                   0xe216eb63 // messageMediaPhoto
+#define TL_MEDIA_DOCUMENT                0x52d8ccd9 // messageMediaDocument
 #define TL_MEDIA_GEO                     0x56e0d474 // messageMediaGeo
 #define TL_MEDIA_CONTACT                 0x70322949 // messageMediaContact
-#define TL_MEDIA_POLL                    0x773f4e66 // messageMediaPoll (Layer 225)
+#define TL_MEDIA_POLL                    0x773f4e66 // messageMediaPoll
 
 // Document Attributes (DocumentAttribute)
 #define TL_ATT_IMAGE_SIZE                0x6c37c15c // documentAttributeImageSize
