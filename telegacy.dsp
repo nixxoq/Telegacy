@@ -125,6 +125,10 @@ SOURCE=.\src\response.cpp
 
 SOURCE=.\src\telegacy.cpp
 # End Source File
+# Begin Source File
+
+SOURCE=.\src\clipboard.cpp
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
@@ -136,6 +140,10 @@ SOURCE=.\include\telegacy.h
 # Begin Source File
 
 SOURCE=.\include\tl_constructors.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\include\clipboard.h
 # End Source File
 # End Group
 # Begin Group "Resource Files"
