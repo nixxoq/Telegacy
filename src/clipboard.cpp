@@ -281,8 +281,125 @@ void Clipboard_Shutdown(void)
 	Clipboard_CleanupAttachedTempFiles();
 }
 
+static BOOL Clipboard_PasteHDROP(HWND hWndOwner)
+{
+	if (!IsClipboardFormatAvailable(CF_HDROP))
+		return FALSE;
+
+	BOOL opened = FALSE;
+	int retry;
+	for (retry = 0; retry < 5; retry++)
+	{
+		if (OpenClipboard(hWndOwner))
+		{
+			opened = TRUE;
+			break;
+		}
+		Sleep(10);
+	}
+	if (!opened)
+		return FALSE;
+
+	HDROP hDrop = (HDROP)GetClipboardData(CF_HDROP);
+	if (!hDrop)
+	{
+		CloseClipboard();
+		return FALSE;
+	}
+
+	UINT count = DragQueryFile(hDrop, 0xFFFFFFFF, NULL, 0);
+	if (count == 0)
+	{
+		CloseClipboard();
+		return FALSE;
+	}
+
+	std::vector<wchar_t*> newFiles;
+	UINT idx;
+	for (idx = 0; idx < count; idx++)
+	{
+		wchar_t path[MAX_PATH];
+		path[0] = 0;
+		UINT len = DragQueryFileW(hDrop, idx, path, MAX_PATH);
+		if (len == 0)
+		{
+			char pathA[MAX_PATH];
+			pathA[0] = 0;
+			UINT lenA = DragQueryFileA(hDrop, idx, pathA, MAX_PATH);
+			if (lenA > 0)
+				MultiByteToWideChar(CP_ACP, 0, pathA, -1, path, MAX_PATH);
+		}
+
+		if (path[0] == 0)
+			continue;
+
+		DWORD attr = GetFileAttributesW(path);
+		if (attr == 0xFFFFFFFF)
+		{
+			char pathA[MAX_PATH];
+			if (WideCharToMultiByte(CP_ACP, 0, path, -1, pathA, MAX_PATH, NULL, NULL))
+				attr = GetFileAttributesA(pathA);
+		}
+
+		/* Skip directories and nonexistent files */
+		if (attr == 0xFFFFFFFF || (attr & FILE_ATTRIBUTE_DIRECTORY))
+			continue;
+
+		wchar_t *fileStr = _wcsdup(path);
+		if (!fileStr)
+			continue;
+
+		try
+		{
+			newFiles.push_back(fileStr);
+		}
+		catch (...)
+		{
+			free(fileStr);
+			break;
+		}
+
+		if (editing_msg_id)
+			break;
+	}
+
+	CloseClipboard();
+
+	if (newFiles.empty())
+		return FALSE;
+
+	EnterCriticalSection(&csFiles);
+	if (editing_msg_id && !files.empty())
+	{
+		Clipboard_FinishAndRemoveTempFile(files[0]);
+		free(files[0]);
+		files.clear();
+	}
+
+	for (size_t k = 0; k < newFiles.size(); k++)
+	{
+		try
+		{
+			files.push_back(newFiles[k]);
+		}
+		catch (...)
+		{
+			free(newFiles[k]);
+		}
+	}
+	LeaveCriticalSection(&csFiles);
+
+	SendMessage(hToolbar, TB_CHANGEBITMAP, 4, MAKELPARAM(14, 0));
+	open_files_list();
+	return TRUE;
+}
+
 BOOL Clipboard_OnPasteMessageInput(HWND hWndEdit)
 {
+	HWND hWndOwner = hWndEdit ? hWndEdit : hMain;
+	if (Clipboard_PasteHDROP(hWndOwner))
+		return TRUE;
+
 	if (!IsClipboardFormatAvailable(CF_DIB) && !IsClipboardFormatAvailable(CF_BITMAP))
 		return FALSE;
 
@@ -290,6 +407,7 @@ BOOL Clipboard_OnPasteMessageInput(HWND hWndEdit)
 	for (int i = 0; i < 5; i++)
 	{
 		if (OpenClipboard(hWndEdit ? hWndEdit : hMain))
+		if (OpenClipboard(hWndOwner))
 		{
 			opened = TRUE;
 			break;
