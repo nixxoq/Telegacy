@@ -16,7 +16,7 @@ wchar_t* version = L"1.0.4";
 
 prng_state prng;
 hash_state md;
-CRITICAL_SECTION csSock, csCM, csLog;
+CRITICAL_SECTION csSock, csCM, csLog, csFiles;
 
 DCInfo dcInfoMain = {0};
 int time_diff = 0;
@@ -406,8 +406,13 @@ unsigned __stdcall FileSenderWorker(void* param) {
 	KillTimer(hMain, 2);
 	BYTE* enc_query2 = (BYTE*)param;
 	Document* docstemp = (Document*)read_le(enc_query2, 4);
+	EnterCriticalSection(&csFiles);
 	std::vector<wchar_t*> files(::files);
 	::files.clear();
+	for (size_t k = 0; k < files.size(); k++) {
+		Clipboard_MarkTempFileSending(files[k]);
+	}
+	LeaveCriticalSection(&csFiles);
 	SendMessage(hToolbar, TB_CHANGEBITMAP, 4, MAKELPARAM(10, 0));
 	InvalidateRect(hToolbar, NULL, TRUE);
 	BYTE* unenc_query = (BYTE*)malloc(524368);
@@ -461,6 +466,7 @@ unsigned __stdcall FileSenderWorker(void* param) {
 		swprintf(status_msg, lang_str, docstemp[i].filename);
 		SendMessage(hStatus, SB_SETTEXTA, 1 | SBT_OWNERDRAW, (LPARAM)status_msg);
 		fclose(f);
+		Clipboard_FinishAndRemoveTempFile(files[i]);
 		free(files[i]);
 		KillTimer(msgInput, docstemp[i].min);
 	}
@@ -825,6 +831,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		int status_parts[2] = {width / 2, -1};
 		SendMessage(hStatus, SB_SETPARTS, 2, (LPARAM)status_parts);
 		if (nt3) SendMessage(hStatus, SB_SETMINHEIGHT, 18, 0);
+		Clipboard_Init();
 		break;
 	}
 	case WM_COMMAND:
@@ -838,7 +845,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 				if (!f) {
 					if (!file_not_found)
 						MessageBox(NULL, L"The message will not be sent because at least one of the files selected no longer exists. Removing them from the list...", L"Error", MB_OK | MB_ICONERROR);
+					EnterCriticalSection(&csFiles);
+					Clipboard_FinishAndRemoveTempFile(files[i]);
+					free(files[i]);
 					files.erase(files.begin() + i);
+					LeaveCriticalSection(&csFiles);
 					if (!files.size()) {
 						SendMessage(hToolbar, TB_CHANGEBITMAP, 4, MAKELPARAM(10, 0));
 						InvalidateRect(hToolbar, NULL, TRUE);
@@ -1539,7 +1550,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 				recorded.clear();
 				wchar_t* filename = (wchar_t*)malloc(20);
 				wcscpy(filename, L"voice.wav");
+				EnterCriticalSection(&csFiles);
 				files.push_back(filename);
+				LeaveCriticalSection(&csFiles);
 				KillTimer(msgInput, 2);
 				set_typing(0xfd5ec8f5, 0);
 				SendMessage(hToolbar, TB_CHANGEBITMAP, 4, MAKELPARAM(14, 0));
@@ -1556,8 +1569,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_EXPLORER | OFN_NOCHANGEDIR;
 			if (!editing_msg_id) ofn.Flags |= OFN_ALLOWMULTISELECT;
 			if (editing_msg_id && files.size() == 1) {
+				EnterCriticalSection(&csFiles);
+				Clipboard_FinishAndRemoveTempFile(files[0]);
 				free(files[0]);
 				files.clear();
+				LeaveCriticalSection(&csFiles);
 			}
 			if (GetOpenFileName(&ofn)) {
 				int len = wcslen(file_names);
@@ -1567,14 +1583,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 						int file_len = wcslen(file_names + start_pos);
 						wchar_t* file = (wchar_t*)malloc(2*(len + file_len + 2));
 						swprintf(file, L"%s\\%s", file_names, file_names + start_pos);
+						EnterCriticalSection(&csFiles);
 						files.push_back(file);
+						LeaveCriticalSection(&csFiles);
 						start_pos += file_len + 1;
 						if (file_names[start_pos] == 0) break;
 					}
 				} else {
 					wchar_t* file = (wchar_t*)malloc(2*(len + 1));
 					wcscpy(file, file_names);
+					EnterCriticalSection(&csFiles);
 					files.push_back(file);
+					LeaveCriticalSection(&csFiles);
 				}
 				SendMessage(hToolbar, TB_CHANGEBITMAP, 4, MAKELPARAM(14, 0));
 				open_files_list();
@@ -1631,8 +1651,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			SendMessage(msgInput, EM_SETSEL, -1, -1);
 			set_sep_width(width - 309);
 			SendMessage(hToolbar, TB_SETSTATE, 8, MAKELONG(TBSTATE_ENABLED, 0));
-			for (i = 0; i < files.size(); i++) free(files[i]);
+			EnterCriticalSection(&csFiles);
+			for (i = 0; i < files.size(); i++) {
+				Clipboard_FinishAndRemoveTempFile(files[i]);
+				free(files[i]);
+			}
 			files.clear();
+			LeaveCriticalSection(&csFiles);
 			SendMessage(hToolbar, TB_CHANGEBITMAP, 4, MAKELPARAM(10, 0));
 			InvalidateRect(hToolbar, NULL, TRUE);
 			break;
@@ -1798,8 +1823,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			sync_notifications();
 			break;
 		case 999: {
-			for (int i = 0; i < files.size(); i++) free(files[i]);
+			EnterCriticalSection(&csFiles);
+			for (int i = 0; i < files.size(); i++) {
+				Clipboard_FinishAndRemoveTempFile(files[i]);
+				free(files[i]);
+			}
 			files.clear();
+			LeaveCriticalSection(&csFiles);
 			SendMessage(hToolbar, TB_CHANGEBITMAP, 4, MAKELPARAM(10, 0));
 			InvalidateRect(hToolbar, NULL, TRUE);
 			break;
@@ -1828,8 +1858,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			send_query(enc_query, offset + 24);
 			memcpy(last_rpcresult_msgid, unenc_query + 16, 8);
 		} else if (LOWORD(wParam) >= 1000 && LOWORD(wParam) < 1000 + files.size()) {
-			free(files[LOWORD(wParam) - 1000]);
-			files.erase(files.begin() + LOWORD(wParam) - 1000);
+			EnterCriticalSection(&csFiles);
+			int idx = LOWORD(wParam) - 1000;
+			Clipboard_FinishAndRemoveTempFile(files[idx]);
+			free(files[idx]);
+			files.erase(files.begin() + idx);
+			LeaveCriticalSection(&csFiles);
 			if (!files.size()) {
 				SendMessage(hToolbar, TB_CHANGEBITMAP, 4, MAKELPARAM(10, 0));
 				InvalidateRect(hToolbar, NULL, TRUE);
@@ -2052,15 +2086,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		HDROP hDrop = (HDROP)wParam;
 		int count = DragQueryFile(hDrop, 0xFFFFFFFF, NULL, 0);
 		if (editing_msg_id && files.size() == 1) {
+			EnterCriticalSection(&csFiles);
+			Clipboard_FinishAndRemoveTempFile(files[0]);
 			free(files[0]);
 			files.clear();
+			LeaveCriticalSection(&csFiles);
 		}
 		for (int i = 0; i < count; i++) {
 			wchar_t path[256];
 			DragQueryFile(hDrop, i, path, 256);
 			wchar_t* file = (wchar_t*)malloc(2*(wcslen(path)+1));
 			wcscpy(file, path);
+			EnterCriticalSection(&csFiles);
 			files.push_back(file);
+			LeaveCriticalSection(&csFiles);
 			if (editing_msg_id) break;
 		}
 		DragFinish(hDrop);
@@ -2647,6 +2686,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		swprintf(value, L"%d", CHANNELS);
 		WritePrivateProfileString(L"Voice", L"channels", value, appdata_path);
 
+		Clipboard_Shutdown();
+		DeleteCriticalSection(&csFiles);
 		PostQuitMessage(0);
 		return 0;
 	}
@@ -3255,6 +3296,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	InitializeCriticalSection(&csSock);
 	InitializeCriticalSection(&csCM);
 	InitializeCriticalSection(&csLog);
+	InitializeCriticalSection(&csFiles);
 	if (GetFileAttributes(appdata_path) == -1) {
 		CreateDirectory(appdata_path, NULL);
 		wcscat(appdata_path, L"\\custom_emojis");
