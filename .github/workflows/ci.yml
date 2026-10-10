@@ -1,0 +1,49 @@
+name: CI Build
+
+on:
+  push:
+    branches: [ "main", "feat/*" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Telegacy
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/nixxoq/telegacy-build-env:latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build
+        run: |
+          chmod +x scripts/build.sh
+          ./scripts/build.sh both
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: telegacy-binaries
+          path: |
+            Release/telegacy.exe
+            Release.zip
+            Debug/telegacy.exe
+            Debug.zip
+            Telegacy-*-Setup.exe
+          if-no-files-found: warn
+
+      - name: Create GitHub Release on Tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            Release.zip
+            Debug.zip
+            Telegacy-*-Setup.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

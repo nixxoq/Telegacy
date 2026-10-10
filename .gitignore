@@ -1,0 +1,22 @@
+Release/
+Debug/
+dlls/
+docker/vc6-toolchain.tar.gz
+gpl-3.0.txt
+*.dat
+*.iso
+*.zip
+*.exe
+*.plg
+*.dll
+*.obj
+*.res
+*.pch
+*.idb
+*.sbr
+*.map
+src copy/
+telegram-layer-diff/
+
+!deps/
+!deps/**
