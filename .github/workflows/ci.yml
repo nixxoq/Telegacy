@@ -12,8 +12,6 @@ jobs:
   build:
     name: Build Telegacy
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/nixxoq/telegacy-build-env:latest
 
     steps:
       - name: Checkout repository
@@ -21,8 +19,8 @@ jobs:
 
       - name: Build
         run: |
-          chmod +x scripts/build.sh
-          ./scripts/build.sh both
+          chmod +x scripts/docker-build.sh scripts/build.sh
+          ./scripts/docker-build.sh both
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4

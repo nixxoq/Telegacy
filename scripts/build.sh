@@ -46,7 +46,7 @@ build_config() {
     mkdir -p "$cfg"
     wine "$MSDEV" telegacy.dsp /MAKE "telegacy - Win32 $cfg"
     sync_assets "$cfg"
-    zip -q -r "${cfg}.zip" "$cfg" -x "$cfg/*.obj" "$cfg/*.sbr" "$cfg/*.idb" "$cfg/*.res" "$cfg/*.pch" "$cfg/*.map"
+    zip -q -FS -r "${cfg}.zip" "$cfg" -x "$cfg/*.obj" "$cfg/*.sbr" "$cfg/*.idb" "$cfg/*.res" "$cfg/*.pch" "$cfg/*.map"
 }
 
 case "$TARGET_CONFIG" in
@@ -64,3 +64,5 @@ if command -v makensis >/dev/null 2>&1; then
     echo "=== Building NSIS Installer ==="
     makensis -INPUTCHARSET CP1252 telegacy.nsi
 fi
+
+chmod -R a+rw Release Debug dlls *.zip *.exe 2>/dev/null || true
