@@ -1471,13 +1471,16 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 			ofn.lpstrFilter = L"Image Files (*.bmp;*.jpg;*.jpeg;*.png)\0*.bmp;*.jpg;*.jpeg;*.png\0";
 			if (GetOpenFileName(&ofn)) {
 				// adjusting for filesenderworker
-				for (int i = 0; i < files.size(); i++) free(files[i]);
+				EnterCriticalSection(&csFiles);
+				for (int i = 0; i < files.size(); i++) {
+					Clipboard_FinishAndRemoveTempFile(files[i]);
+					free(files[i]);
+				}
 				files.clear();
-				SendMessage(hToolbar, TB_CHANGEBITMAP, 4, MAKELPARAM(10, 0));
-				InvalidateRect(hToolbar, NULL, TRUE);
 				int len = wcslen(file_name);
 				wchar_t* str = _wcsdup(file_name);
 				files.push_back(str);
+				LeaveCriticalSection(&csFiles);
 				Document* docstemp = (Document*)malloc(sizeof(Document));
 				docstemp->min = 123;
 				fortuna_read(docstemp->id, 8, &prng);
@@ -1575,6 +1578,9 @@ LRESULT CALLBACK WndProcMsgInput(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
 	static char ime_lang;
 	static bool typing = false;
 	switch (msg) {
+	case WM_PASTE:
+		if (Clipboard_OnPasteMessageInput(hWnd)) return 0;
+		break;
 	case WM_CHAR:
 	case EM_STREAMIN:
 		if (msg == WM_CHAR && wParam == L':' && shortcode_check(hWnd)) return 0;
@@ -1613,6 +1619,12 @@ LRESULT CALLBACK WndProcMsgInput(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
 		if (wParam == VK_RETURN && !(GetKeyState(VK_SHIFT) & 0x8000)) {
 			SendMessage(hMain, WM_COMMAND, MAKEWPARAM(1, 0), NULL);
 			return 0;
+		}
+		if ((wParam == 'V' || wParam == 'v') && (GetKeyState(VK_CONTROL) & 0x8000)) {
+			if (Clipboard_OnPasteMessageInput(hWnd)) return 0;
+		}
+		if (wParam == VK_INSERT && (GetKeyState(VK_SHIFT) & 0x8000)) {
+			if (Clipboard_OnPasteMessageInput(hWnd)) return 0;
 		}
 		break;
 	case WM_IME_NOTIFY: {
