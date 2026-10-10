@@ -45,6 +45,7 @@ You should have received a copy of the GNU General Public License along with Tel
 #include <ddeml.h>
 #include "../res/resource.h"
 #include <tl_constructors.h>
+#include "clipboard.h"
 #pragma comment(lib, "wsock32.lib")
 #pragma comment(lib, "comctl32.lib")
 #pragma comment(lib, "tomcrypt.lib")
@@ -264,7 +265,7 @@ extern unsigned int pubkey_der_len;
 
 extern prng_state prng;
 extern hash_state md;
-extern CRITICAL_SECTION csSock, csCM, csLog;
+extern CRITICAL_SECTION csSock, csCM, csLog, csFiles;
 
 extern DCInfo dcInfoMain;
 extern int time_diff;
