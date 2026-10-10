@@ -876,7 +876,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			for (i = 0; i < files_count; i++) {
 				if (files_count > 1) msgcontent_len += 24 + peer_len; // inputSingleMedia
 				msgcontent_len += 36; // inputmedia base
-				HKEY hKey;
+				HKEY hKey = NULL;
 				unsigned long mime_type_size = 256;
 				wchar_t mime_type[256];
 				if (RegOpenKeyEx(HKEY_CLASSES_ROOT, wcsrchr(files[i], L'.'), 0, KEY_READ, &hKey) != ERROR_SUCCESS

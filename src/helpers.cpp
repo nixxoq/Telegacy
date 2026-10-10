@@ -822,7 +822,8 @@ wchar_t* files_i(wchar_t* file_name) {
 }
 
 int place_inputmedia(BYTE* unenc_query, Document* docstemp, int index) {
-	if (docstemp->min == 6) write_le(unenc_query, 0x7d8375da, 4);
+	if (!docstemp) return 0;
+	if (docstemp[index].min == 6) write_le(unenc_query, 0x7d8375da, 4);
 	else write_le(unenc_query, 0x037c9330, 4);
 	write_le(unenc_query + 4, 0, 4);
 	memcpy(unenc_query + 12, docstemp[index].id, 8);
@@ -836,8 +837,8 @@ int place_inputmedia(BYTE* unenc_query, Document* docstemp, int index) {
 		fclose(f);
 		offset += 36;
 	} else write_le(unenc_query + 8, 0xfa4f0bb5, 4);
-	if (docstemp->min != 6) {
-		HKEY hKey;
+	if (docstemp[index].min != 6) {
+		HKEY hKey = NULL;
 		unsigned long mime_type_size = 256;
 		wchar_t mime_type[256];
 		if (RegOpenKeyEx(HKEY_CLASSES_ROOT, wcsrchr(files[index], L'.'), 0, KEY_READ, &hKey) != ERROR_SUCCESS
